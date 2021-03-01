@@ -175,7 +175,7 @@ resource "null_resource" "set-default-shell" {
     }
 
     inline = [
-              "powershell.exe -ExecutionPolicy Bypass -Command \"New-ItemProperty -Path 'HKLM:\SOFTWARE\OpenSSH' -Name DefaultShell -Value 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe' -PropertyType String -Force\""
+              "powershell.exe -ExecutionPolicy Bypass -Command \"New-ItemProperty -Path 'HKLM:\\SOFTWARE\\OpenSSH' -Name DefaultShell -Value 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe' -PropertyType String -Force\""
              ]
   }
 }
