@@ -170,7 +170,6 @@ resource "null_resource" "set-default-shell" {
       password        = vcd_vapp_vm.vm.customization[0].admin_password
       host            = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
       port            = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
-      target_platform = "windows"
       script_path     = "/Windows/Temp/terraform_%RAND%.cmd"
       timeout         = "15m"
     }
@@ -193,7 +192,6 @@ resource "null_resource" "initial-config" {
       password        = vcd_vapp_vm.vm.customization[0].admin_password
       host            = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
       port            = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
-      target_platform = "windows"
       script_path     = "/Windows/Temp/terraform_%RAND%.ps1"
       timeout         = "15m"
     }
@@ -223,7 +221,6 @@ resource "null_resource" "disk-config" {
       password        = vcd_vapp_vm.vm.customization[0].admin_password
       host            = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
       port            = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
-      target_platform = "windows"
       script_path     = "/Windows/Temp/terraform_%RAND%.ps1"
       timeout         = "15m"
     }
