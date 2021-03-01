@@ -164,17 +164,17 @@ resource "null_resource" "initial-config" {
 
   provisioner "remote-exec" {
     
-  connection {
-    type        = "ssh"
-    user        = "Administrator"
-    password    = vcd_vapp_vm.vm.customization[0].admin_password
-    host        = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
-    port        = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
-    script_path = "/Windows/Temp/terraform_%RAND%.ps1"
-    timeout     = "15m"
-  }
+    connection {
+      type        = "ssh"
+      user        = "Administrator"
+      password    = vcd_vapp_vm.vm.customization[0].admin_password
+      host        = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
+      port        = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
+      script_path = "/Windows/Temp/terraform_%RAND%.ps1"
+      timeout     = "15m"
+    }
 
-  inline = [
+    inline = [
               "Get-Partition -DriveLetter C | Resize-Partition -Size (Get-PartitionSupportedSize -DriveLetter C).sizeMax -Confirm:$false -ErrorAction SilentlyContinue",
               "Set-WmiInstance -InputObject (Get-WmiObject -Class Win32_volume -Filter 'DriveLetter = \"D:\"' ) -Arguments @{DriveLetter=([char]([int][char]\"D\" + ${length(var.data_disks)}) + \":\")}",
               "New-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server' -Name 'fDenyTSConnections' -Value 0 -Force",
@@ -182,7 +182,7 @@ resource "null_resource" "initial-config" {
               "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Wow6432Node\\Microsoft\\.NetFramework\\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord -Force -Confirm:$false",
               "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\.NetFramework\\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord -Force -Confirm:$false",
               "Install-PackageProvider NuGet -Force"
-           ]
+             ]
   }
 }
 
@@ -193,19 +193,19 @@ resource "null_resource" "disk-config" {
 
   provisioner "remote-exec" {
     
-  connection {
-    type        = "ssh"
-    user        = "Administrator"
-    password    = vcd_vapp_vm.vm.customization[0].admin_password
-    host        = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
-    port        = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
-    script_path = "/Windows/Temp/terraform_%RAND%.ps1"
-    timeout     = "15m"
-  }
+    connection {
+      type        = "ssh"
+      user        = "Administrator"
+      password    = vcd_vapp_vm.vm.customization[0].admin_password
+      host        = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
+      port        = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
+      script_path = "/Windows/Temp/terraform_%RAND%.ps1"
+      timeout     = "15m"
+    }
 
-  inline = [
+    inline = [
               "Get-Disk -Number (Get-WmiObject -Class Win32_DiskDrive | ?{$_.SCSIPort -ne '0' -and $_.SCSITargetId -eq ${count.index}}).Index | Initialize-Disk -PartitionStyle GPT -PassThru | New-Partition -DriveLetter ${var.data_disks[count.index].letter} -UseMaximumSize",
               "Format-Volume -DriveLetter ${var.data_disks[count.index].letter} -FileSystem NTFS -AllocationUnitSize ${var.data_disks[count.index].block_size != "" ? var.data_disks[count.index].block_size * 1024 : 4096} -Confirm:$false"
-           ]
+             ]
   }
 }
