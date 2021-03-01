@@ -158,9 +158,31 @@ resource "vcd_nsxv_firewall_rule" "rdp-firewall-rule" {
   }
 }
 
+# Set default shell for SSH
+resource "null_resource" "set-default-shell" {
+  depends_on = [ vcd_vapp_vm.vm ]
+
+  provisioner "remote-exec" {
+    
+    connection {
+      type        = "ssh"
+      user        = "Administrator"
+      password    = vcd_vapp_vm.vm.customization[0].admin_password
+      host        = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
+      port        = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
+      script_path = "/Windows/Temp/terraform_%RAND%.ps1"
+      timeout     = "15m"
+    }
+
+    inline = [
+              "powershell.exe -ExecutionPolicy Bypass -Command \"New-ItemProperty -Path 'HKLM:\SOFTWARE\OpenSSH' -Name DefaultShell -Value 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe' -PropertyType String -Force\""
+             ]
+  }
+}
+
 # Initial OS configuration
 resource "null_resource" "initial-config" {
-  depends_on = [vcd_vapp_vm.vm]
+  depends_on = [ null_resource.set-default-shell ]
 
   provisioner "remote-exec" {
     
@@ -176,9 +198,10 @@ resource "null_resource" "initial-config" {
 
     inline = [
               "Get-Partition -DriveLetter C | Resize-Partition -Size (Get-PartitionSupportedSize -DriveLetter C).sizeMax -Confirm:$false -ErrorAction SilentlyContinue",
-              "Set-WmiInstance -InputObject (Get-WmiObject -Class Win32_volume -Filter 'DriveLetter = \"D:\"' ) -Arguments @{DriveLetter=([char]([int][char]\"D\" + ${length(var.data_disks)}) + \":\")}",
+              "Set-WmiInstance -InputObject (Get-WmiObject -Class Win32_volume -Filter 'DriveLetter = \"D:\"') -Arguments @{DriveLetter=([char]([int][char]\"D\" + ${length(var.data_disks)}) + \":\")}",
               "New-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server' -Name 'fDenyTSConnections' -Value 0 -Force",
               "Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'",
+              "Enable-NetFirewallRule -DisplayName 'File and Printer Sharing (Echo Request - ICMPv4-In)'",
               "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Wow6432Node\\Microsoft\\.NetFramework\\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord -Force -Confirm:$false",
               "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\.NetFramework\\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord -Force -Confirm:$false",
               "Install-PackageProvider NuGet -Force"
@@ -189,7 +212,7 @@ resource "null_resource" "initial-config" {
 # Data disk configuration
 resource "null_resource" "disk-config" {
   count = length(var.data_disks)
-  depends_on = [null_resource.initial-config]
+  depends_on = [ null_resource.initial-config ]
 
   provisioner "remote-exec" {
     
