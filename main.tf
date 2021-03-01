@@ -175,7 +175,7 @@ resource "null_resource" "set-default-shell" {
     }
 
     inline = [
-              "powershell.exe -ExecutionPolicy Bypass -Command \"New-ItemProperty -Path 'HKLM:\\SOFTWARE\\OpenSSH' -Name DefaultShell -Value 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe' -PropertyType String -Force\""
+                "reg add HKLM\\SOFTWARE\\OpenSSH /v DefaultShell /t REG_SZ /d C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe /f"
              ]
   }
 }
@@ -197,14 +197,13 @@ resource "null_resource" "initial-config" {
     }
 
     inline = [
-              "Get-Partition -DriveLetter C | Resize-Partition -Size (Get-PartitionSupportedSize -DriveLetter C).sizeMax -Confirm:$false -ErrorAction SilentlyContinue",
-              "Set-WmiInstance -InputObject (Get-WmiObject -Class Win32_volume -Filter 'DriveLetter = \"D:\"') -Arguments @{DriveLetter=([char]([int][char]\"D\" + ${length(var.data_disks)}) + \":\")}",
-              "New-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server' -Name 'fDenyTSConnections' -Value 0 -Force",
-              "Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'",
-              "Enable-NetFirewallRule -DisplayName 'File and Printer Sharing (Echo Request - ICMPv4-In)'",
-              "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Wow6432Node\\Microsoft\\.NetFramework\\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord -Force -Confirm:$false",
-              "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\.NetFramework\\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord -Force -Confirm:$false",
-              "Install-PackageProvider NuGet -Force"
+                "Get-Partition -DriveLetter C | Resize-Partition -Size (Get-PartitionSupportedSize -DriveLetter C).sizeMax -Confirm:$false -ErrorAction SilentlyContinue",
+                "Set-WmiInstance -InputObject (Get-WmiObject -Class Win32_volume -Filter 'DriveLetter = \"D:\"') -Arguments @{DriveLetter=([char]([int][char]\"D\" + ${length(var.data_disks)}) + \":\")}",
+                "New-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server' -Name 'fDenyTSConnections' -Value 0 -Force",
+                "Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'",
+                "Enable-NetFirewallRule -DisplayName 'File and Printer Sharing (Echo Request - ICMPv4-In)'",
+                "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Wow6432Node\\Microsoft\\.NetFramework\\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord -Force -Confirm:$false",
+                "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\.NetFramework\\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord -Force -Confirm:$false"
              ]
   }
 }
@@ -227,8 +226,8 @@ resource "null_resource" "disk-config" {
     }
 
     inline = [
-              "Get-Disk -Number (Get-WmiObject -Class Win32_DiskDrive | ?{$_.SCSIPort -ne '0' -and $_.SCSITargetId -eq ${count.index}}).Index | Initialize-Disk -PartitionStyle GPT -PassThru | New-Partition -DriveLetter ${var.data_disks[count.index].letter} -UseMaximumSize",
-              "Format-Volume -DriveLetter ${var.data_disks[count.index].letter} -FileSystem NTFS -AllocationUnitSize ${var.data_disks[count.index].block_size != "" ? var.data_disks[count.index].block_size * 1024 : 4096} -Confirm:$false"
+                "Get-Disk -Number (Get-WmiObject -Class Win32_DiskDrive | ?{$_.SCSIPort -ne '0' -and $_.SCSITargetId -eq ${count.index}}).Index | Initialize-Disk -PartitionStyle GPT -PassThru | New-Partition -DriveLetter ${var.data_disks[count.index].letter} -UseMaximumSize",
+                "Format-Volume -DriveLetter ${var.data_disks[count.index].letter} -FileSystem NTFS -AllocationUnitSize ${var.data_disks[count.index].block_size != "" ? var.data_disks[count.index].block_size * 1024 : 4096} -Confirm:$false"
              ]
   }
 }
