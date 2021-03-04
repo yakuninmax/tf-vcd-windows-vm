@@ -143,6 +143,12 @@ variable "template" {
   description = "Windows VM template"
 }
 
+variable "update" {
+  type        = bool
+  descritpion = "Set true to install Windows updates"
+  default     = false
+}
+
 variable "vapp" {
   type        = string
   description = "vAPP name"

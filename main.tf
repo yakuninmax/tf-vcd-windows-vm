@@ -56,7 +56,7 @@ resource "vcd_vm_internal_disk" "disk" {
 
 # Insert media
 resource "vcd_inserted_media" "media" {
-  count = var.media != null ? 1 : 0
+  count      = var.media != null ? 1 : 0
   depends_on = [ vcd_vm_internal_disk.disk ]
 
   vapp_name = vcd_vapp_vm.vm.vapp_name
@@ -202,6 +202,7 @@ resource "null_resource" "initial-config" {
                 "New-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server' -Name 'fDenyTSConnections' -Value 0 -Force",
                 "Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'",
                 "Enable-NetFirewallRule -DisplayName 'File and Printer Sharing (Echo Request - ICMPv4-In)'",
+                "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Active Setup\\Installed Components\\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}' -Name 'IsInstalled' -Value 0",
                 "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Wow6432Node\\Microsoft\\.NetFramework\\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord -Force -Confirm:$false",
                 "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\.NetFramework\\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord -Force -Confirm:$false"
              ]
@@ -210,7 +211,7 @@ resource "null_resource" "initial-config" {
 
 # Data disk configuration
 resource "null_resource" "disk-config" {
-  count = length(var.data_disks)
+  count      = length(var.data_disks)
   depends_on = [ null_resource.initial-config ]
 
   provisioner "remote-exec" {
@@ -228,6 +229,31 @@ resource "null_resource" "disk-config" {
     inline = [
                 "Get-Disk -Number (Get-WmiObject -Class Win32_DiskDrive | ?{$_.SCSIPort -ne '0' -and $_.SCSITargetId -eq ${count.index}}).Index | Initialize-Disk -PartitionStyle GPT -PassThru | New-Partition -DriveLetter ${var.data_disks[count.index].letter} -UseMaximumSize",
                 "Format-Volume -DriveLetter ${var.data_disks[count.index].letter} -FileSystem NTFS -AllocationUnitSize ${var.data_disks[count.index].block_size != "" ? var.data_disks[count.index].block_size * 1024 : 4096} -Confirm:$false"
+             ]
+  }
+}
+
+# Install Windows updates
+resource "null_resource" "install-updates" {
+  depends_on = [ null_resource.disk-config ]
+
+  provisioner "remote-exec" {
+    
+    connection {
+      type            = "ssh"
+      user            = "Administrator"
+      password        = vcd_vapp_vm.vm.customization[0].admin_password
+      host            = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
+      port            = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
+      script_path     = "/Windows/Temp/terraform_%RAND%.ps1"
+      timeout         = "15m"
+    }
+
+    inline = [
+                "Install-PackageProvider NuGet -Confirm:$false -Force",
+                "Install-Module PSWIndowsUpdate -Confirm:$false -Force",
+                "Install-WindowsUpdate -AcceptAll -Install -IgnoreReboot -Confirm:$false",
+                "Start-Job -ScriptBlock {Stop-Service sshd; Restart-Computer -Force}"
              ]
   }
 }
