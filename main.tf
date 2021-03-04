@@ -235,7 +235,7 @@ resource "null_resource" "disk-config" {
 
 # Install Windows updates
 resource "null_resource" "install-updates" {
-  count      = var.update = true ? 1 : 0
+  count      = var.update == true ? 1 : 0
   depends_on = [ null_resource.disk-config ]
 
   provisioner "remote-exec" {
