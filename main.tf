@@ -232,29 +232,3 @@ resource "null_resource" "disk-config" {
              ]
   }
 }
-
-# Install Windows updates
-resource "null_resource" "install-updates" {
-  count      = var.update == true ? 1 : 0
-  depends_on = [ null_resource.disk-config ]
-
-  provisioner "remote-exec" {
-    
-    connection {
-      type            = "ssh"
-      user            = "Administrator"
-      password        = vcd_vapp_vm.vm.customization[0].admin_password
-      host            = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
-      port            = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
-      script_path     = "/Windows/Temp/terraform_%RAND%.ps1"
-      timeout         = "15m"
-    }
-
-    inline = [
-                "Install-PackageProvider NuGet -Confirm:$false -Force",
-                "Install-Module PSWIndowsUpdate -Confirm:$false -Force",
-                "Install-WindowsUpdate -AcceptAll -Install -IgnoreReboot -Confirm:$false",
-                "Start-Job -ScriptBlock {Stop-Service sshd; Restart-Computer -Force}"
-             ]
-  }
-}
