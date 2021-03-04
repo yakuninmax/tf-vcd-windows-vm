@@ -145,7 +145,7 @@ variable "template" {
 
 variable "update" {
   type        = bool
-  descritpion = "Set true to install Windows updates"
+  description = "Set true to install Windows updates"
   default     = false
 }
 
