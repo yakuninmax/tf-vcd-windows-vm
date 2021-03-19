@@ -147,3 +147,9 @@ variable "vapp" {
   type        = string
   description = "vAPP name"
 }
+
+variable "zabbix_server" {
+  type        = string
+  description = "Zabbix server IP/FQDN"
+  default     = ""
+}
