@@ -253,8 +253,8 @@ resource "null_resource" "zabbix-agent" {
     inline = [
                 "iwr https://cdn.zabbix.com/zabbix/binaries/stable/5.0/5.0.9/zabbix_agent-5.0.9-windows-amd64.zip -OutFile C:\\Windows\\Temp\\zabbix_agent-5.0.9-windows-amd64.zip",
                 "Expand-Archive C:\\Windows\\Temp\\zabbix_agent-5.0.9-windows-amd64.zip -DestinationPath C:\\zabbix -Force",
-                "(Get-Content C:\\zabbix\\conf\\zabbix_agentd.conf).Replace 'Server=127.0.0.1', 'Server=${var.zabbix_server}' | Set-Content -Path C:\\zabbix\\conf\\zabbix_agentd.conf",
-                "(Get-Content C:\\zabbix\\conf\\zabbix_agentd.conf).Replace 'ServerActive=127.0.0.1', 'ServerActive=${var.zabbix_server}' | Set-Content -Path C:\\zabbix\\conf\\zabbix_agentd.conf",
+                "(Get-Content C:\\zabbix\\conf\\zabbix_agentd.conf).Replace('Server=127.0.0.1', 'Server=${var.zabbix_server}') | Set-Content -Path C:\\zabbix\\conf\\zabbix_agentd.conf",
+                "(Get-Content C:\\zabbix\\conf\\zabbix_agentd.conf).Replace('ServerActive=127.0.0.1', 'ServerActive=${var.zabbix_server}') | Set-Content -Path C:\\zabbix\\conf\\zabbix_agentd.conf",
                 "(Get-Content C:\\zabbix\\conf\\zabbix_agentd.conf).Replace('Hostname=Windows host', \"Hostname=$env:COMPUTERNAME\") | Set-Content -Path C:\\zabbix\\conf\\zabbix_agentd.conf",
                 "C:\\zabbix\\bin\\zabbix_agentd.exe --config c:\\zabbix\\conf\\zabbix_agentd.conf --install",
                 "New-NetFirewallRule -DisplayName 'Zabbix agent' -Direction Inbound -Protocol TCP -LocalPort 10050 -Action Allow",
