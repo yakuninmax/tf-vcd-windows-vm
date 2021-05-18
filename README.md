@@ -1,2 +1,2 @@
 # tf-vcd-windows-vm
-Module for creating Windows VMs in VMware vCloud Director
+Deploy Windows Server VM in Vmware vCloud Director
