@@ -68,7 +68,7 @@ resource "vcd_inserted_media" "media" {
 
 # Get random SSH port
 resource "random_integer" "ssh-port" {
-  count = var.allow_external_ssh == true ? 1 : 0
+  count = var.allow_external_ssh == true ? var.external_ssh_port == "" ? 1 : 0 : 0
   
   min = 40000
   max = 49999
@@ -76,7 +76,7 @@ resource "random_integer" "ssh-port" {
 
 # Get random RDP port
 resource "random_integer" "rdp-port" {
-  count = var.allow_external_rdp == true ? 1 : 0
+  count = var.allow_external_rdp == true ? var.external_rdp_port == "" ? 1 : 0 : 0
 
   min = 50000
   max = 59999
@@ -165,13 +165,14 @@ resource "null_resource" "set-default-shell" {
   provisioner "remote-exec" {
     
     connection {
-      type        = "ssh"
-      user        = "Administrator"
-      password    = vcd_vapp_vm.vm.customization[0].admin_password
-      host        = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
-      port        = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
-      script_path = "/Windows/Temp/terraform_%RAND%.cmd"
-      timeout     = "15m"
+      type            = "ssh"
+      target_platform = "windows"
+      user            = "Administrator"
+      password        = vcd_vapp_vm.vm.customization[0].admin_password
+      host            = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
+      port            = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
+      script_path     = "/Windows/Temp/terraform_%RAND%.cmd"
+      timeout         = "15m"
     }
 
     inline = [
@@ -187,16 +188,18 @@ resource "null_resource" "initial-config" {
   provisioner "remote-exec" {
     
     connection {
-      type        = "ssh"
-      user        = "Administrator"
-      password    = vcd_vapp_vm.vm.customization[0].admin_password
-      host        = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
-      port        = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
-      script_path = "/Windows/Temp/terraform_%RAND%.ps1"
-      timeout     = "15m"
+      type            = "ssh"
+      target_platform = "windows"
+      user            = "Administrator"
+      password        = vcd_vapp_vm.vm.customization[0].admin_password
+      host            = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
+      port            = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
+      script_path     = "/Windows/Temp/terraform_%RAND%.ps1"
+      timeout         = "15m"
     }
 
     inline = [
+                "$global:ProgressPreference = 'SilentlyContinue'",
                 "Get-Partition -DriveLetter C | Resize-Partition -Size (Get-PartitionSupportedSize -DriveLetter C).sizeMax -Confirm:$false -ErrorAction SilentlyContinue",
                 "Set-WmiInstance -InputObject (Get-WmiObject -Class Win32_volume -Filter 'DriveLetter = \"D:\"') -Arguments @{DriveLetter=([char]([int][char]\"D\" + ${length(var.data_disks)}) + \":\")}",
                 "New-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server' -Name 'fDenyTSConnections' -Value 0 -Force",
@@ -204,7 +207,8 @@ resource "null_resource" "initial-config" {
                 "Enable-NetFirewallRule -DisplayName 'File and Printer Sharing (Echo Request - ICMPv4-In)'",
                 "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Active Setup\\Installed Components\\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}' -Name 'IsInstalled' -Value 0",
                 "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Wow6432Node\\Microsoft\\.NetFramework\\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord -Force -Confirm:$false",
-                "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\.NetFramework\\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord -Force -Confirm:$false"
+                "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\.NetFramework\\v4.0.30319' -Name 'SchUseStrongCrypto' -Value '1' -Type DWord -Force -Confirm:$false",
+                "$global:ProgressPreference = 'Continue'"
              ]
   }
 }
@@ -217,18 +221,21 @@ resource "null_resource" "disk-config" {
   provisioner "remote-exec" {
     
     connection {
-      type        = "ssh"
-      user        = "Administrator"
-      password    = vcd_vapp_vm.vm.customization[0].admin_password
-      host        = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
-      port        = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
-      script_path = "/Windows/Temp/terraform_%RAND%.ps1"
-      timeout     = "15m"
+      type            = "ssh"
+      target_platform = "windows"
+      user            = "Administrator"
+      password        = vcd_vapp_vm.vm.customization[0].admin_password
+      host            = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
+      port            = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
+      script_path     = "/Windows/Temp/terraform_%RAND%.ps1"
+      timeout         = "15m"
     }
 
     inline = [
+                "$global:ProgressPreference = 'SilentlyContinue'",
                 "Get-Disk -Number (Get-WmiObject -Class Win32_DiskDrive | ?{$_.SCSIPort -ne '0' -and $_.SCSITargetId -eq ${count.index}}).Index | Initialize-Disk -PartitionStyle GPT -PassThru | New-Partition -DriveLetter ${var.data_disks[count.index].letter} -UseMaximumSize",
-                "Format-Volume -DriveLetter ${var.data_disks[count.index].letter} -FileSystem NTFS -AllocationUnitSize ${var.data_disks[count.index].block_size != "" ? var.data_disks[count.index].block_size * 1024 : 4096} -Confirm:$false"
+                "Format-Volume -DriveLetter ${var.data_disks[count.index].letter} -FileSystem NTFS -AllocationUnitSize ${var.data_disks[count.index].block_size != "" ? var.data_disks[count.index].block_size * 1024 : 4096} -Confirm:$false",
+                "$global:ProgressPreference = 'Continue'"
              ]
   }
 }
@@ -241,16 +248,18 @@ resource "null_resource" "zabbix-agent" {
   provisioner "remote-exec" {
     
     connection {
-      type        = "ssh"
-      user        = "Administrator"
-      password    = vcd_vapp_vm.vm.customization[0].admin_password
-      host        = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
-      port        = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
-      script_path = "/Windows/Temp/terraform_%RAND%.ps1"
-      timeout     = "15m"
+      type            = "ssh"
+      target_platform = "windows"
+      user            = "Administrator"
+      password        = vcd_vapp_vm.vm.customization[0].admin_password
+      host            = var.allow_external_ssh == true ? var.external_ip != "" ? var.external_ip : data.vcd_edgegateway.edge.external_network_ips[0] : vcd_vapp_vm.vm.network[0].ip
+      port            = var.allow_external_ssh == true ? var.external_ssh_port != "" ? var.external_ssh_port : random_integer.ssh-port[0].result : 22
+      script_path     = "/Windows/Temp/terraform_%RAND%.ps1"
+      timeout         = "15m"
     }
 
     inline = [
+                "$global:ProgressPreference = 'SilentlyContinue'",
                 "iwr https://cdn.zabbix.com/zabbix/binaries/stable/5.0/5.0.9/zabbix_agent-5.0.9-windows-amd64.zip -OutFile C:\\Windows\\Temp\\zabbix_agent-5.0.9-windows-amd64.zip",
                 "Expand-Archive C:\\Windows\\Temp\\zabbix_agent-5.0.9-windows-amd64.zip -DestinationPath C:\\zabbix -Force",
                 "(Get-Content C:\\zabbix\\conf\\zabbix_agentd.conf).Replace('LogFile=c:\\zabbix_agentd.log', 'LogFile=c:\\zabbix\\zabbix_agentd.log') | Set-Content -Path C:\\zabbix\\conf\\zabbix_agentd.conf",
@@ -259,7 +268,8 @@ resource "null_resource" "zabbix-agent" {
                 "(Get-Content C:\\zabbix\\conf\\zabbix_agentd.conf).Replace('Hostname=Windows host', \"Hostname=$env:COMPUTERNAME\") | Set-Content -Path C:\\zabbix\\conf\\zabbix_agentd.conf",
                 "C:\\zabbix\\bin\\zabbix_agentd.exe --config c:\\zabbix\\conf\\zabbix_agentd.conf --install",
                 "New-NetFirewallRule -DisplayName 'Zabbix agent' -Direction Inbound -Protocol TCP -LocalPort 10050 -Action Allow",
-                "C:\\zabbix\\bin\\zabbix_agentd.exe --start"
+                "C:\\zabbix\\bin\\zabbix_agentd.exe --start",
+                "$global:ProgressPreference = 'Continue'"
              ]
   }  
 }
